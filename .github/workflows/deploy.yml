@@ -17,4 +17,6 @@ jobs:
       PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
     with:
       module-name: systembridgegui
+      pre-install-command: |
+        pip install .
       use-incremental: true
