@@ -10,11 +10,11 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
+from systembridgemodels.media_play import MediaPlay
+from systembridgemodels.notification import Notification as NotificationData
 from systembridgeshared.base import Base
 from systembridgeshared.database import Database
 from systembridgeshared.exceptions import ConnectionErrorException
-from systembridgeshared.models.media_play import MediaPlay
-from systembridgeshared.models.notification import Notification as NotificationData
 from systembridgeshared.settings import Settings
 from systembridgeshared.websocket_client import WebSocketClient
 

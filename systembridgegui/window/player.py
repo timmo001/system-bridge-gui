@@ -6,6 +6,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
+from systembridgemodels.media_play import MediaPlay
 from systembridgeshared.base import Base
 from systembridgeshared.const import (
     QUERY_API_KEY,
@@ -13,7 +14,6 @@ from systembridgeshared.const import (
     SECRET_API_KEY,
     SETTING_PORT_API,
 )
-from systembridgeshared.models.media_play import MediaPlay
 from systembridgeshared.settings import Settings
 
 

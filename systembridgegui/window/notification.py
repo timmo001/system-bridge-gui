@@ -7,6 +7,7 @@ from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
+from systembridgemodels.notification import Notification
 from systembridgeshared.base import Base
 from systembridgeshared.const import (
     QUERY_API_KEY,
@@ -14,7 +15,6 @@ from systembridgeshared.const import (
     SECRET_API_KEY,
     SETTING_PORT_API,
 )
-from systembridgeshared.models.notification import Notification
 from systembridgeshared.settings import Settings
 
 
