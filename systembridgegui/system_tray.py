@@ -70,7 +70,7 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu.addSeparator()
 
-        latest_version_text = "Latest Version"
+        latest_version_text = "Up to date"
         result_version_current = self._database.get_data_item_by_key(
             DatabaseSystem, "version"
         )
