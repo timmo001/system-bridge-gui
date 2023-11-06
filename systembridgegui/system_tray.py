@@ -70,7 +70,7 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu.addSeparator()
 
-        latest_version_text = "Latest Version"
+        latest_version_text = "Up to date"
         result_version_current = self._database.get_data_item_by_key(
             DatabaseSystem, "version"
         )
@@ -94,7 +94,7 @@ class SystemTray(Base, QSystemTrayIcon):
         )
 
         if version_newer_available.lower() == "true":
-            latest_version_text = f"{version_latest} (New)"
+            latest_version_text = f"New version avaliable: {version_latest}"
         else:
             latest_version_text += f" ({version_current})"
 
