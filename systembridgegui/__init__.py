@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from typing import Optional
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
@@ -35,7 +34,7 @@ class Application(Base):
         settings: Settings,
         command: str = "main",
         gui_only: bool = False,
-        data: Optional[dict] = None,
+        data: dict | None = None,
     ) -> None:
         """Initialize"""
         super().__init__()
@@ -160,8 +159,8 @@ class Application(Base):
         self,
         path: str,
         maximized: bool,
-        width: Optional[int] = 1280,
-        height: Optional[int] = 720,
+        width: int | None = 1280,
+        height: int | None = 720,
     ) -> None:
         """Show the main window"""
         self._logger.info("Showing window: %s", path)

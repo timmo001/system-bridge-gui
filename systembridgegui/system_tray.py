@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
-from typing import Optional
 from webbrowser import open_new_tab
 
 from pyperclip import copy
@@ -37,7 +36,7 @@ class SystemTray(Base, QSystemTrayIcon):
         icon: QIcon,
         parent: QApplication,
         callback_exit_application: Callable,
-        callback_show_window: Callable[[str, bool, Optional[int], Optional[int]], None],
+        callback_show_window: Callable[[str, bool, int | None, int | None], None],
     ) -> None:
         """Initialize the system tray"""
         Base.__init__(self)
