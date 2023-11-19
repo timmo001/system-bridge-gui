@@ -36,7 +36,7 @@ class Application(Base):
         gui_only: bool = False,
         data: dict | None = None,
     ) -> None:
-        """Initialize"""
+        """Initialise"""
         super().__init__()
         self._logger.info("System Bridge GUI %s: Startup", __version__.public())
 

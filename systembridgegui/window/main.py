@@ -23,7 +23,7 @@ class MainWindow(Base, QFrame):
         settings: Settings,
         icon: QIcon,
     ) -> None:
-        """Initialize the window"""
+        """Initialise the window"""
         Base.__init__(self)
         QFrame.__init__(self)
 

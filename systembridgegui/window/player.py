@@ -28,7 +28,7 @@ class PlayerWindow(Base, QFrame):
         media_type: str,
         media_play: MediaPlay,
     ) -> None:
-        """Initialize the window"""
+        """Initialise the window"""
         Base.__init__(self)
         QFrame.__init__(
             self,

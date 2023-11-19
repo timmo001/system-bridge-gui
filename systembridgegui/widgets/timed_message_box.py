@@ -14,7 +14,7 @@ class TimedMessageBox(QtWidgets.QMessageBox):
         message=None,
         parent=None,
     ):
-        """Initialize"""
+        """Initialise"""
         super().__init__(parent)
         self.time_to_wait = timeout
         self.message = message

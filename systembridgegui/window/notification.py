@@ -28,7 +28,7 @@ class NotificationWindow(Base, QFrame):
         application: QApplication,
         notification: Notification,
     ) -> None:
-        """Initialize the window"""
+        """Initialise the window"""
         Base.__init__(self)
         QFrame.__init__(
             self,
