@@ -116,8 +116,8 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu_help.addSeparator()
 
-        action_api_key: QAction = menu_help.addAction("Copy API key to clipboard")
-        action_api_key.triggered.connect(self._copy_api_key)  # type: ignore
+        action_token: QAction = menu_help.addAction("Copy Token to clipboard")
+        action_token.triggered.connect(self._copy_token)  # type: ignore
 
         menu_help.addSeparator()
 
@@ -142,10 +142,10 @@ class SystemTray(Base, QSystemTrayIcon):
         if reason == QSystemTrayIcon.Trigger:
             self.contextMenu().popup(QCursor.pos())
 
-    def _copy_api_key(self) -> None:
-        """Copy API key to clipboard"""
-        self._logger.info("Copy API key to clipboard")
-        key = self._settings.get_secret("api_key")
+    def _copy_token(self) -> None:
+        """Copy Token to clipboard"""
+        self._logger.info("Copy Token to clipboard")
+        key = self._settings.get_secret("token")
         copy(key)
 
     def _open_latest_releases(self) -> None:

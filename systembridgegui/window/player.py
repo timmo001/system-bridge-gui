@@ -9,9 +9,9 @@ from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
 from systembridgemodels.media_play import MediaPlay
 from systembridgeshared.base import Base
 from systembridgeshared.const import (
-    QUERY_API_KEY,
     QUERY_API_PORT,
-    SECRET_API_KEY,
+    QUERY_TOKEN,
+    SECRET_TOKEN,
     SETTING_PORT_API,
 )
 from systembridgeshared.settings import Settings
@@ -60,10 +60,10 @@ class PlayerWindow(Base, QFrame):
         )
 
         api_port = self._settings.get(SETTING_PORT_API)
-        api_key = self._settings.get_secret(SECRET_API_KEY)
+        token = self._settings.get_secret(SECRET_TOKEN)
         url = QUrl(
             f"""http://localhost:{api_port}/app/player/{media_type}.html?{urlencode({
-                    QUERY_API_KEY: api_key,
+                    QUERY_TOKEN: token,
                     QUERY_API_PORT: api_port,
                     **media_play.dict(exclude_none=True),
                 })}"""
