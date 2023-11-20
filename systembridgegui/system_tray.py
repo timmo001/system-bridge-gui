@@ -1,4 +1,4 @@
-"""System Bridge GUI: System Tray"""
+"""System Tray"""
 from __future__ import annotations
 
 import os

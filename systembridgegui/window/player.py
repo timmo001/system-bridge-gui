@@ -1,4 +1,4 @@
-"""System Bridge GUI: Player Window"""
+"""Player Window"""
 import sys
 from urllib.parse import urlencode
 

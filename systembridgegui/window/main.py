@@ -1,4 +1,4 @@
-"""System Bridge GUI: Main window"""
+"""Main window"""
 from urllib.parse import urlencode
 
 from PySide6.QtCore import QUrl

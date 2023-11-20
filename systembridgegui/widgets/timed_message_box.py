@@ -1,4 +1,4 @@
-"""System Bridge GUI: Timed Message Box"""
+"""Timed Message Box"""
 from PySide6 import QtCore, QtWidgets
 
 # pylint: disable=c-extension-no-member
