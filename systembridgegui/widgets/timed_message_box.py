@@ -1,4 +1,4 @@
-"""Timed Message Box"""
+"""Timed Message Box."""
 from PySide6 import QtCore, QtWidgets
 
 # pylint: disable=c-extension-no-member
@@ -6,7 +6,7 @@ from PySide6.QtGui import QCloseEvent
 
 
 class TimedMessageBox(QtWidgets.QMessageBox):
-    """Timed Message Box"""
+    """Timed Message Box."""
 
     def __init__(
         self,
@@ -14,7 +14,7 @@ class TimedMessageBox(QtWidgets.QMessageBox):
         message=None,
         parent=None,
     ):
-        """Initialise"""
+        """Initialise."""
         super().__init__(parent)
         self.time_to_wait = timeout
         self.message = message
@@ -27,7 +27,7 @@ class TimedMessageBox(QtWidgets.QMessageBox):
         self.timer.start()
 
     def _timer_changed(self):
-        """Change the content of the message box"""
+        """Change the content of the message box."""
         self.setText(
             f"{f'{self.message} ' if self.message else 'Closing automatically in '}{self.time_to_wait} seconds."
         )
@@ -40,6 +40,6 @@ class TimedMessageBox(QtWidgets.QMessageBox):
         self,
         event: QCloseEvent,
     ):
-        """Close event"""
+        """Close event."""
         self.timer.stop()
         event.accept()

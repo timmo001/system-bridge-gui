@@ -1,4 +1,4 @@
-"""System Tray"""
+"""System Tray."""
 from __future__ import annotations
 
 import os
@@ -8,10 +8,9 @@ from webbrowser import open_new_tab
 from pyperclip import copy
 from PySide6.QtGui import QAction, QCursor, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+from systembridgemodels.data import Data
 from systembridgeshared.base import Base
 from systembridgeshared.common import get_user_data_directory
-from systembridgeshared.database import Database
-from systembridgeshared.models.database_data import System as DatabaseSystem
 from systembridgeshared.settings import Settings
 
 PATH_BRIDGES_OPEN_ON = "/app/bridges/openon.html"
@@ -26,23 +25,22 @@ URL_LATEST_RELEASE = "https://github.com/timmo001/system-bridge/releases/latest"
 
 
 class SystemTray(Base, QSystemTrayIcon):
-    """System Tray"""
+    """System Tray."""
 
     # pylint: disable=unsubscriptable-object
     def __init__(
         self,
-        database: Database,
+        data: Data,
         settings: Settings,
         icon: QIcon,
         parent: QApplication,
         callback_exit_application: Callable,
         callback_show_window: Callable[[str, bool, int | None, int | None], None],
     ) -> None:
-        """Initialise the system tray"""
+        """Initialise the system tray."""
         Base.__init__(self)
         QSystemTrayIcon.__init__(self, icon, parent)
 
-        self._database = database
         self._settings = settings
 
         self._logger.info("Setup system tray")
@@ -70,29 +68,14 @@ class SystemTray(Base, QSystemTrayIcon):
         menu.addSeparator()
 
         latest_version_text = "Up to date"
-        result_version_current = self._database.get_data_item_by_key(
-            DatabaseSystem, "version"
-        )
-        version_current = (
-            result_version_current.value if result_version_current is not None else None
-        )
-        result_version_latest = self._database.get_data_item_by_key(
-            DatabaseSystem, "version_latest"
-        )
-        version_latest = (
-            result_version_latest.value if result_version_latest is not None else None
-        )
-        result_version_newer_available = self._database.get_data_item_by_key(
-            DatabaseSystem, "version_newer_available"
-        )
-        version_newer_available: str = (
-            result_version_newer_available.value
-            if result_version_newer_available is not None
-            and result_version_newer_available.value is not None
-            else ""
+
+        version_current = getattr(data.system, "version") if data.system else None
+        version_latest = getattr(data.system, "version_latest") if data.system else None
+        version_newer_available = (
+            getattr(data.system, "version_newer_available") if data.system else None
         )
 
-        if version_newer_available.lower() == "true":
+        if version_newer_available:
             latest_version_text = f"New version avaliable: {version_latest}"
         else:
             latest_version_text += f" ({version_current})"
@@ -138,65 +121,64 @@ class SystemTray(Base, QSystemTrayIcon):
         self,
         reason: int,
     ) -> None:
-        """Handle the activated signal"""
-        if reason == QSystemTrayIcon.Trigger:
+        """Handle the activated signal."""
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.contextMenu().popup(QCursor.pos())
 
     def _copy_token(self) -> None:
-        """Copy Token to clipboard"""
+        """Copy Token to clipboard."""
         self._logger.info("Copy Token to clipboard")
-        key = self._settings.get_secret("token")
-        copy(key)
+        copy(self._settings.data.api.token)
 
     def _open_latest_releases(self) -> None:
-        """Open latest release"""
+        """Open latest release."""
         self._logger.info("Open: %s", URL_LATEST_RELEASE)
         open_new_tab(URL_LATEST_RELEASE)
 
     def _open_docs(self) -> None:
-        """Open documentation"""
+        """Open documentation."""
         self._logger.info("Open: %s", URL_DOCS)
         open_new_tab(URL_DOCS)
 
     def _open_feature_request(self) -> None:
-        """Open feature request"""
+        """Open feature request."""
         self._logger.info("Open: %s", URL_ISSUES)
         open_new_tab(URL_ISSUES)
 
     def _open_issues(self) -> None:
-        """Open issues"""
+        """Open issues."""
         self._logger.info("Open: %s", URL_ISSUES)
         open_new_tab(URL_ISSUES)
 
     def _open_discussions(self) -> None:
-        """Open discussions"""
+        """Open discussions."""
         self._logger.info("Open: %s", URL_DISCUSSIONS)
         open_new_tab(URL_DISCUSSIONS)
 
     def _open_log(self) -> None:
-        """Open log"""
+        """Open log."""
         log_path = os.path.join(get_user_data_directory(), "system-bridge.log")
         self._logger.info("Open: %s", log_path)
         open_new_tab(log_path)
 
     def _open_gui_log(self) -> None:
-        """Open GUI log"""
+        """Open GUI log."""
         log_path = os.path.join(get_user_data_directory(), "system-bridge-gui.log")
         self._logger.info("Open: %s", log_path)
         open_new_tab(log_path)
 
     # def _show_bridges_send_to(self) -> None:
-    #     """Show bridges open url on window"""
+    #     """Show bridges open url on window."""
     #     self.callback_show_window(PATH_BRIDGES_OPEN_ON, False, 620, 420)
 
     # def _show_bridges_setup(self) -> None:
-    #     """Show bridges setup window"""
+    #     """Show bridges setup window."""
     #     self.callback_show_window(PATH_BRIDGES_SETUP, False)
 
     def _show_data(self) -> None:
-        """Show api data"""
+        """Show api data."""
         self.callback_show_window(PATH_DATA, False)  # type: ignore
 
     def _show_settings(self) -> None:
-        """Show settings"""
+        """Show settings."""
         self.callback_show_window(PATH_SETTINGS, False)  # type: ignore

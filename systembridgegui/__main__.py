@@ -1,39 +1,41 @@
-"""Main"""
+"""Main."""
 from __future__ import annotations
 
 import asyncio
 import json
+import sys
 
-from systembridgeshared.const import SETTING_LOG_LEVEL
-from systembridgeshared.database import Database
 from systembridgeshared.logger import setup_logger
 from systembridgeshared.settings import Settings
 from typer import Typer
 
 from . import Application
-from ._version import __version__
 
 asyncio.set_event_loop(asyncio.new_event_loop())
 
 app = Typer()
-database = Database()
-settings = Settings(database)
+settings = Settings()
 
-log_level: str = str(settings.get(SETTING_LOG_LEVEL))
-
-setup_logger(log_level, "system-bridge-gui")
+setup_logger(settings.data.log_level, "system-bridge-gui")
 
 
 @app.command(name="main", help="Run the main application")
-def main(
-    gui_only: bool = False,
-) -> None:
-    """Run the main application"""
+def main() -> None:
+    """Run the main application."""
     Application(
-        database,
         settings,
         command="main",
-        gui_only=gui_only,
+        gui_only=False,
+    )
+
+
+@app.command(name="gui-only", help="Run the main application in GUI only mode")
+def gui_only() -> None:
+    """Run the main application in GUI only mode."""
+    Application(
+        settings,
+        command="main",
+        gui_only=True,
     )
 
 
@@ -42,9 +44,8 @@ def media_player(
     media_type: str,
     data: str,
 ) -> None:
-    """Run the media player"""
+    """Run the media player."""
     Application(
-        database,
         settings,
         command=f"media-player-{media_type}",
         data=json.loads(data),
@@ -55,9 +56,8 @@ def media_player(
 def notification(
     data: str,
 ) -> None:
-    """Show a notification"""
+    """Show a notification."""
     Application(
-        database,
         settings,
         command="notification",
         data=json.loads(data),
@@ -65,4 +65,8 @@ def notification(
 
 
 if __name__ == "__main__":
-    app()
+    # If no arguments are passed, run the main application.
+    if sys.argv[1:] == []:
+        main()
+    else:
+        app()
