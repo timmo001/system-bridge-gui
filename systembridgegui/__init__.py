@@ -10,6 +10,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
+from systembridgeconnector.websocket_client import WebSocketClient
 from systembridgemodels.data import Data, DataEnum
 from systembridgemodels.get_data import GetData
 from systembridgemodels.media_play import MediaPlay
@@ -21,7 +22,6 @@ from systembridgeshared.exceptions import (
     ConnectionErrorException,
 )
 from systembridgeshared.settings import Settings
-from systembridgeshared.websocket_client import WebSocketClient
 
 from ._version import __version__
 from .system_tray import SystemTray
@@ -74,7 +74,11 @@ class Application(Base):
         if command == "main":
             self._logger.info("Main: Setup")
 
-            self._websocket_client = WebSocketClient(self._settings)
+            self._websocket_client = WebSocketClient(
+                "localhost",
+                self._settings.data.api.port,
+                self._settings.data.api.token,
+            )
 
             self._main_window = MainWindow(
                 self._settings,
