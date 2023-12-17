@@ -25,17 +25,6 @@ def main() -> None:
     Application(
         settings,
         command="main",
-        gui_only=False,
-    )
-
-
-@app.command(name="gui-only", help="Run the main application in GUI only mode")
-def gui_only() -> None:
-    """Run the main application in GUI only mode."""
-    Application(
-        settings,
-        command="main",
-        gui_only=True,
     )
 
 

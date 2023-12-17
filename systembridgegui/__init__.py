@@ -38,7 +38,6 @@ class Application(Base):
         self,
         settings: Settings,
         command: str = "main",
-        gui_only: bool = False,
         data: dict | None = None,
     ) -> None:
         """Initialise."""
@@ -75,13 +74,14 @@ class Application(Base):
         if command == "main":
             self._logger.info("Main: Setup")
 
-            self._gui_only = gui_only
             self._websocket_client = WebSocketClient(self._settings)
 
             self._main_window = MainWindow(
                 self._settings,
                 self._icon,
             )
+
+            asyncio.run(self._setup_websocket())
 
             self._system_tray_icon = SystemTray(
                 self._data,
@@ -91,9 +91,6 @@ class Application(Base):
                 self._callback_exit_application,
                 self._callback_show_window,
             )
-
-            asyncio.run(self._setup_websocket())
-
             self._system_tray_icon.show()
         elif command == "media-player-audio":
             self._logger.info("Media Player: Audio")
@@ -159,7 +156,7 @@ class Application(Base):
 
     def _callback_exit_application(self) -> None:
         """Exit the application."""
-        asyncio.run(self._exit_application(self._gui_only))
+        self._exit_application(0)
 
     def _callback_show_window(
         self,
@@ -202,21 +199,14 @@ class Application(Base):
         error_message.setWindowTitle("Error")
         error_message.exec()
         # Exit cleanly
-        asyncio.create_task(self._exit_application(True, 1))  # noqa: RUF006
+        self._exit_application(1)
 
-    async def _exit_application(
+    def _exit_application(
         self,
-        gui_only: bool,
         code: int = 0,
     ) -> None:
         """Exit the backend."""
-        if not gui_only:
-            self._logger.info("Exit Backend..")
-            # await self._setup_websocket()
-            await self._websocket_client.exit_backend()
-            await self._websocket_client.close()
         self._logger.info("Exit GUI..")
-
         self._system_tray_icon.hide()
         self._application.exit(code)
         sys.exit(code)
@@ -247,7 +237,7 @@ class Application(Base):
 
                 await self._websocket_client.get_data(
                     GetData(
-                        modules=[DataEnum.System],
+                        modules=[DataEnum.System.value],
                     )
                 )
 
@@ -255,26 +245,20 @@ class Application(Base):
                     self._logger.info("Waiting for system data..")
                     await asyncio.sleep(1)
         except (AuthenticationException, ConnectionErrorException) as exception:
-            self._logger.error("Could not connect to WebSocket: %s", exception)
+            self._logger.warning("Could not connect to WebSocket: %s", exception)
 
             if self._websocket_listen_task:
                 self._websocket_listen_task.cancel()
                 self._websocket_listen_task = None
-
-            self._startup_error("Could not connect to WebSocket!")
         except (ConnectionClosedException, ConnectionResetError) as exception:
-            self._logger.error("Connection closed to WebSocket: %s", exception)
+            self._logger.warning("Connection closed to WebSocket: %s", exception)
 
             if self._websocket_listen_task:
                 self._websocket_listen_task.cancel()
                 self._websocket_listen_task = None
-
-            self._startup_error("Connection closed to WebSocket!")
         except asyncio.TimeoutError as exception:
             self._logger.error("Connection timeout to WebSocket: %s", exception)
 
             if self._websocket_listen_task:
                 self._websocket_listen_task.cancel()
                 self._websocket_listen_task = None
-
-            self._startup_error("Connection timeout to WebSocket!")
