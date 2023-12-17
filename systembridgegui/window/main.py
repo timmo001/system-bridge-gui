@@ -1,4 +1,4 @@
-"""System Bridge GUI: Main window"""
+"""Main window."""
 from urllib.parse import urlencode
 
 from PySide6.QtCore import QUrl
@@ -6,24 +6,19 @@ from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QVBoxLayout
 from systembridgeshared.base import Base
-from systembridgeshared.const import (
-    QUERY_API_KEY,
-    QUERY_API_PORT,
-    SECRET_API_KEY,
-    SETTING_PORT_API,
-)
+from systembridgeshared.const import QUERY_API_PORT, QUERY_TOKEN
 from systembridgeshared.settings import Settings
 
 
 class MainWindow(Base, QFrame):
-    """Main Window"""
+    """Main Window."""
 
     def __init__(
         self,
         settings: Settings,
         icon: QIcon,
     ) -> None:
-        """Initialise the window"""
+        """Initialise the window."""
         Base.__init__(self)
         QFrame.__init__(self)
 
@@ -44,7 +39,7 @@ class MainWindow(Base, QFrame):
         self,
         event: QCloseEvent,
     ) -> None:
-        """Close the window instead of closing the app"""
+        """Close window instead of closing the app."""
         event.ignore()
         self.hide()
 
@@ -52,13 +47,11 @@ class MainWindow(Base, QFrame):
         self,
         path: str,
     ) -> None:
-        """Setup the window"""
-        api_port = self._settings.get(SETTING_PORT_API)
-        api_key = self._settings.get_secret(SECRET_API_KEY)
+        """Set up the main window."""
         url = QUrl(
-            f"""http://localhost:{api_port}{path}?{urlencode({
-                    QUERY_API_KEY: api_key,
-                    QUERY_API_PORT: api_port,
+            f"""http://localhost:{self._settings.data.api.port}{path}?{urlencode({
+                    QUERY_TOKEN: self._settings.data.api.token,
+                    QUERY_API_PORT: self._settings.data.api.port,
                 })}"""
         )
         self._logger.info("Open URL: %s", url)

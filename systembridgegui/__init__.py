@@ -1,21 +1,27 @@
-"""System Bridge GUI"""
+"""System Bridge GUI."""
 from __future__ import annotations
 
 import asyncio
 import os
 import sys
+from typing import Any
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
+from systembridgeconnector.websocket_client import WebSocketClient
+from systembridgemodels.data import Data, DataEnum
+from systembridgemodels.get_data import GetData
 from systembridgemodels.media_play import MediaPlay
 from systembridgemodels.notification import Notification as NotificationData
 from systembridgeshared.base import Base
-from systembridgeshared.database import Database
-from systembridgeshared.exceptions import ConnectionErrorException
+from systembridgeshared.exceptions import (
+    AuthenticationException,
+    ConnectionClosedException,
+    ConnectionErrorException,
+)
 from systembridgeshared.settings import Settings
-from systembridgeshared.websocket_client import WebSocketClient
 
 from ._version import __version__
 from .system_tray import SystemTray
@@ -26,22 +32,21 @@ from .window.player import PlayerWindow
 
 
 class Application(Base):
-    """Application"""
+    """Application."""
 
     def __init__(
         self,
-        database: Database,
         settings: Settings,
         command: str = "main",
-        gui_only: bool = False,
         data: dict | None = None,
     ) -> None:
-        """Initialise"""
+        """Initialise."""
         super().__init__()
         self._logger.info("System Bridge GUI %s: Startup", __version__.public())
 
-        self._database = database
         self._settings = settings
+        self._data = Data()
+        self._websocket_listen_task: asyncio.Task | None = None
 
         self._application = QApplication([])
         self._icon = QIcon(os.path.join(os.path.dirname(__file__), "icon.png"))
@@ -69,19 +74,21 @@ class Application(Base):
         if command == "main":
             self._logger.info("Main: Setup")
 
-            self._gui_only = gui_only
-            self._websocket_client = WebSocketClient(self._settings)
-
-            asyncio.run(self._setup_websocket())
-            asyncio.run(self._websocket_client.close())
+            self._websocket_client = WebSocketClient(
+                "localhost",
+                self._settings.data.api.port,
+                self._settings.data.api.token,
+            )
 
             self._main_window = MainWindow(
                 self._settings,
                 self._icon,
             )
 
+            asyncio.run(self._setup_websocket())
+
             self._system_tray_icon = SystemTray(
-                self._database,
+                self._data,
                 self._settings,
                 self._icon,
                 self._application,
@@ -134,7 +141,7 @@ class Application(Base):
             )
 
             if notification_data.audio is not None:
-                self._logger.info("Playing audio: %s", notification_data.audio.dict())
+                self._logger.info("Playing audio: %s", notification_data.audio)
                 player = QMediaPlayer()
                 player.setSource(QUrl(notification_data.audio.source))
                 audio_output = QAudioOutput()
@@ -152,8 +159,8 @@ class Application(Base):
         sys.exit(self._application.exec())
 
     def _callback_exit_application(self) -> None:
-        """Exit the application"""
-        asyncio.run(self._exit_application(self._gui_only))
+        """Exit the application."""
+        self._exit_application(0)
 
     def _callback_show_window(
         self,
@@ -162,7 +169,7 @@ class Application(Base):
         width: int | None = 1280,
         height: int | None = 720,
     ) -> None:
-        """Show the main window"""
+        """Show the main window."""
         self._logger.info("Showing window: %s", path)
 
         if width is None:
@@ -187,7 +194,7 @@ class Application(Base):
         self,
         message: str,
     ) -> None:
-        """Handle a startup error"""
+        """Handle a startup error."""
         error_message = TimedMessageBox(
             5,
             f"{message} Exiting in",
@@ -196,32 +203,66 @@ class Application(Base):
         error_message.setWindowTitle("Error")
         error_message.exec()
         # Exit cleanly
-        asyncio.create_task(self._exit_application(True, 1))
+        self._exit_application(1)
 
-    async def _exit_application(
+    def _exit_application(
         self,
-        gui_only: bool,
         code: int = 0,
     ) -> None:
-        """Exit the backend"""
-        if not gui_only:
-            self._logger.info("Exit Backend..")
-            await self._setup_websocket()
-            await self._websocket_client.exit_backend()
-            await self._websocket_client.close()
+        """Exit the backend."""
         self._logger.info("Exit GUI..")
         self._system_tray_icon.hide()
         self._application.exit(code)
         sys.exit(code)
 
+    async def _handle_module(
+        self,
+        module_name: str,
+        module: Any,
+    ) -> None:
+        """Handle data from the WebSocket client."""
+        self._logger.debug("Set new data for: %s", module_name)
+        setattr(self._data, module_name, module)
+
+    async def _listen_for_data(self) -> None:
+        """Listen for events from the WebSocket."""
+        await self._websocket_client.listen(callback=self._handle_module)
+
     async def _setup_websocket(self) -> None:
-        """Setup the WebSocket client"""
+        """Use WebSocket for updates."""
         try:
-            async with asyncio.timeout(20):
+            async with asyncio.timeout(10):
                 await self._websocket_client.connect()
-        except ConnectionErrorException as exception:
-            self._logger.error("Could not connect to WebSocket: %s", exception)
-            self._startup_error("Could not connect to WebSocket!")
+
+                self._websocket_listen_task = asyncio.create_task(
+                    self._listen_for_data(),
+                    name="System Bridge WebSocket Listener",
+                )
+
+                await self._websocket_client.get_data(
+                    GetData(
+                        modules=[DataEnum.System.value],
+                    )
+                )
+
+                while self._data.system is None:
+                    self._logger.info("Waiting for system data..")
+                    await asyncio.sleep(1)
+        except (AuthenticationException, ConnectionErrorException) as exception:
+            self._logger.warning("Could not connect to WebSocket: %s", exception)
+
+            if self._websocket_listen_task:
+                self._websocket_listen_task.cancel()
+                self._websocket_listen_task = None
+        except (ConnectionClosedException, ConnectionResetError) as exception:
+            self._logger.warning("Connection closed to WebSocket: %s", exception)
+
+            if self._websocket_listen_task:
+                self._websocket_listen_task.cancel()
+                self._websocket_listen_task = None
         except asyncio.TimeoutError as exception:
             self._logger.error("Connection timeout to WebSocket: %s", exception)
-            self._startup_error("Connection timeout to WebSocket!")
+
+            if self._websocket_listen_task:
+                self._websocket_listen_task.cancel()
+                self._websocket_listen_task = None

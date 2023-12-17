@@ -1,5 +1,6 @@
-"""System Bridge GUI: Player Window"""
+"""Player Window."""
 import sys
+from dataclasses import asdict
 from urllib.parse import urlencode
 
 from PySide6.QtCore import QUrl
@@ -8,17 +9,12 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
 from systembridgemodels.media_play import MediaPlay
 from systembridgeshared.base import Base
-from systembridgeshared.const import (
-    QUERY_API_KEY,
-    QUERY_API_PORT,
-    SECRET_API_KEY,
-    SETTING_PORT_API,
-)
+from systembridgeshared.const import QUERY_API_PORT, QUERY_TOKEN
 from systembridgeshared.settings import Settings
 
 
 class PlayerWindow(Base, QFrame):
-    """Player Window"""
+    """Player Window."""
 
     def __init__(
         self,
@@ -28,7 +24,7 @@ class PlayerWindow(Base, QFrame):
         media_type: str,
         media_play: MediaPlay,
     ) -> None:
-        """Initialise the window"""
+        """Initialise the window."""
         Base.__init__(self)
         QFrame.__init__(
             self,
@@ -59,13 +55,11 @@ class PlayerWindow(Base, QFrame):
             screen_geometry.height() - self.height() - 8,
         )
 
-        api_port = self._settings.get(SETTING_PORT_API)
-        api_key = self._settings.get_secret(SECRET_API_KEY)
         url = QUrl(
-            f"""http://localhost:{api_port}/app/player/{media_type}.html?{urlencode({
-                    QUERY_API_KEY: api_key,
-                    QUERY_API_PORT: api_port,
-                    **media_play.dict(exclude_none=True),
+            f"""http://localhost:{self._settings.data.api.port}/app/player/{media_type}.html?{urlencode({
+                    QUERY_TOKEN: self._settings.data.api.token,
+                    QUERY_API_PORT: self._settings.data.api.port,
+                    **asdict(media_play),
                 })}"""
         )
         self._logger.info("Open URL: %s", url)
@@ -76,7 +70,7 @@ class PlayerWindow(Base, QFrame):
         self.showNormal()
 
     def _url_changed(self, url: QUrl):
-        """Handle URL changes"""
+        """Handle URL changes."""
         self._logger.info("URL Changed: %s", url)
         if url.host() == "close.window":
             self._logger.info("Close Window Requested. Closing Window.")

@@ -1,5 +1,6 @@
-"""System Bridge GUI: Notification Window"""
+"""Notification Window."""
 import sys
+from dataclasses import asdict
 from json import dumps
 from urllib.parse import urlencode
 
@@ -9,17 +10,12 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
 from systembridgemodels.notification import Notification
 from systembridgeshared.base import Base
-from systembridgeshared.const import (
-    QUERY_API_KEY,
-    QUERY_API_PORT,
-    SECRET_API_KEY,
-    SETTING_PORT_API,
-)
+from systembridgeshared.const import QUERY_API_PORT, QUERY_TOKEN
 from systembridgeshared.settings import Settings
 
 
 class NotificationWindow(Base, QFrame):
-    """Notification Window"""
+    """Notification Window."""
 
     def __init__(
         self,
@@ -28,7 +24,7 @@ class NotificationWindow(Base, QFrame):
         application: QApplication,
         notification: Notification,
     ) -> None:
-        """Initialise the window"""
+        """Initialise the window."""
         Base.__init__(self)
         QFrame.__init__(
             self,
@@ -73,17 +69,15 @@ class NotificationWindow(Base, QFrame):
             screen_geometry.height() - self.height() - 8,
         )
 
-        notification_dict = notification.dict(exclude_none=True)
+        notification_dict = asdict(notification)
         if "actions" in notification_dict:
             # Fix encoding issue by converting array to json
             notification_dict["actions"] = dumps(notification_dict["actions"])
 
-        api_port = self._settings.get(SETTING_PORT_API)
-        api_key = self._settings.get_secret(SECRET_API_KEY)
         url = QUrl(
-            f"""http://localhost:{api_port}/app/notification.html?{urlencode({
-                    QUERY_API_KEY: api_key,
-                    QUERY_API_PORT: api_port,
+            f"""http://localhost:{self._settings.data.api.port}/app/notification.html?{urlencode({
+                    QUERY_TOKEN: self._settings.data.api.token,
+                    QUERY_API_PORT: self._settings.data.api.port,
                     **notification_dict,
                 })}"""
         )
@@ -104,14 +98,14 @@ class NotificationWindow(Base, QFrame):
         self.timer.start()
 
     def _timer_changed(self):
-        """Change the content of the message box"""
+        """Change the content of the message box."""
         self.time_to_wait -= 1
         if self.time_to_wait < 0:
             self.close()
             sys.exit(0)
 
     def _url_changed(self, url: QUrl):
-        """Handle URL changes"""
+        """Handle URL changes."""
         self._logger.info("URL Changed: %s", url)
         if url.host() == "close.window":
             self._logger.info("Close Window Requested. Closing Window.")

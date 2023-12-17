@@ -8,7 +8,7 @@
       "module": "systembridgegui",
       "preLaunchTask": "pip install",
       "justMyCode": false,
-      "args": ["--help"]
+      "args": []
     }
   ]
 }
