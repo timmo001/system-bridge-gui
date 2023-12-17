@@ -227,7 +227,7 @@ class Application(Base):
     async def _setup_websocket(self) -> None:
         """Use WebSocket for updates."""
         try:
-            async with asyncio.timeout(30):
+            async with asyncio.timeout(10):
                 await self._websocket_client.connect()
 
                 self._websocket_listen_task = asyncio.create_task(
