@@ -11,9 +11,8 @@ from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
 from systembridgeconnector.websocket_client import WebSocketClient
-from systembridgemodels.data import Data, DataEnum
-from systembridgemodels.get_data import GetData
 from systembridgemodels.media_play import MediaPlay
+from systembridgemodels.modules import DataEnum, GetData, ModulesData
 from systembridgemodels.notification import Notification as NotificationData
 from systembridgeshared.base import Base
 from systembridgeshared.exceptions import (
@@ -45,7 +44,7 @@ class Application(Base):
         self._logger.info("System Bridge GUI %s: Startup", __version__.public())
 
         self._settings = settings
-        self._data = Data()
+        self._data = ModulesData()
         self._websocket_listen_task: asyncio.Task | None = None
 
         self._application = QApplication([])
@@ -241,7 +240,7 @@ class Application(Base):
 
                 await self._websocket_client.get_data(
                     GetData(
-                        modules=[DataEnum.System.value],
+                        modules=[DataEnum.SYSTEM.value],
                     )
                 )
 
