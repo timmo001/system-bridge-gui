@@ -1,7 +1,7 @@
 """Notification Window."""
-import sys
 from dataclasses import asdict
 from json import dumps
+import sys
 from urllib.parse import urlencode
 
 from PySide6.QtCore import QTimer, QUrl
