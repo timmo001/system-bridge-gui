@@ -20,6 +20,4 @@ jobs:
       pre-install-command: |
         sudo apt update
         sudo apt install libegl-dev libpulse0
-        pip install --upgrade --pre systembridgeshared
-        pip install .
       use-incremental: true
