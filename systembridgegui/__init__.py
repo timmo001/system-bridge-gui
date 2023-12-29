@@ -84,7 +84,8 @@ class Application(Base):
                 self._icon,
             )
 
-            asyncio.run(self._setup_websocket())
+            self._loop = asyncio.get_event_loop()
+            self._loop.create_task(self._setup_websocket())
 
             self._system_tray_icon = SystemTray(
                 self._data,
@@ -209,8 +210,31 @@ class Application(Base):
         code: int = 0,
     ) -> None:
         """Exit the backend."""
-        self._logger.info("Exit GUI..")
+        self._logger.info("Exit..")
         self._system_tray_icon.hide()
+
+        if code == 0:
+            if self._loop is not None:
+                if self._websocket_client is not None:
+                    if not self._websocket_client.connected:
+                        self._logger.info("Connect to backend..")
+                        self._loop.run_until_complete(self._setup_websocket())
+                    self._logger.info("Request backend exit..")
+                    self._loop.run_until_complete(self._websocket_client.exit_backend())
+                    self._logger.info("Disconnect WebSocket..")
+                    self._loop.run_until_complete(self._websocket_client.close())
+
+                if self._websocket_listen_task:
+                    self._logger.info("Cancel WebSocket listener..")
+                    self._websocket_listen_task.cancel()
+                    self._websocket_listen_task = None
+
+                    self._logger.info("Stop event loop..")
+                    self._loop.stop()
+                    self._loop.close()
+                    self._loop = None
+
+        self._logger.info("Exit GUI..")
         self._application.exit(code)
         sys.exit(code)
 
@@ -225,15 +249,32 @@ class Application(Base):
 
     async def _listen_for_data(self) -> None:
         """Listen for events from the WebSocket."""
-        await self._websocket_client.listen(callback=self._handle_module)
+        try:
+            await self._websocket_client.listen(callback=self._handle_module)
+        except asyncio.CancelledError:
+            self._logger.info("WebSocket listener cancelled")
+        except (
+            ConnectionErrorException,
+            ConnectionClosedException,
+            ConnectionResetError,
+        ) as exception:
+            self._logger.warning("Connection closed to WebSocket: %s", exception)
+
+        if self._websocket_listen_task:
+            self._websocket_listen_task.cancel()
+            self._websocket_listen_task = None
 
     async def _setup_websocket(self) -> None:
         """Use WebSocket for updates."""
+        if self._loop is None:
+            self._logger.error("No event loop!")
+            return
+
         try:
             async with asyncio.timeout(10):
                 await self._websocket_client.connect()
 
-                self._websocket_listen_task = asyncio.create_task(
+                self._websocket_listen_task = self._loop.create_task(
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
                 )
