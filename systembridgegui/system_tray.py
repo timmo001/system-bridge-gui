@@ -1,8 +1,8 @@
 """System Tray."""
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
+import os
 from webbrowser import open_new_tab
 
 from pyperclip import copy
@@ -67,7 +67,7 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu.addSeparator()
 
-        latest_version_text = "Up to date"
+        latest_version_text = "Check for updates"
 
         version_current = getattr(data.system, "version") if data.system else None
         version_latest = getattr(data.system, "version_latest") if data.system else None
@@ -76,9 +76,9 @@ class SystemTray(Base, QSystemTrayIcon):
         )
 
         if version_newer_available is not None:
-            latest_version_text = f"New version avaliable: {version_latest}"
+            latest_version_text = f"New version avaliable ({version_latest})"
         elif version_current is not None:
-            latest_version_text += f" ({version_current})"
+            latest_version_text = f"Up to date ({version_current})"
 
         action_latest_release: QAction = menu.addAction(latest_version_text)
         action_latest_release.triggered.connect(self._open_latest_releases)  # type: ignore
