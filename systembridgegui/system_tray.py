@@ -30,7 +30,6 @@ class SystemTray(Base, QSystemTrayIcon):
     # pylint: disable=unsubscriptable-object
     def __init__(
         self,
-        data: ModulesData,
         settings: Settings,
         icon: QIcon,
         parent: QApplication,
@@ -67,20 +66,7 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu.addSeparator()
 
-        latest_version_text = "Check for updates"
-
-        version_current = getattr(data.system, "version") if data.system else None
-        version_latest = getattr(data.system, "version_latest") if data.system else None
-        version_newer_available = (
-            getattr(data.system, "version_newer_available") if data.system else None
-        )
-
-        if version_newer_available is not None:
-            latest_version_text = f"New version avaliable ({version_latest})"
-        elif version_current is not None:
-            latest_version_text = f"Up to date ({version_current})"
-
-        action_latest_release: QAction = menu.addAction(latest_version_text)
+        action_latest_release: QAction = menu.addAction("Check for Updates")
         action_latest_release.triggered.connect(self._open_latest_releases)  # type: ignore
 
         menu_help = menu.addMenu("Help")
@@ -182,3 +168,25 @@ class SystemTray(Base, QSystemTrayIcon):
     def _show_settings(self) -> None:
         """Show settings."""
         self.callback_show_window(PATH_SETTINGS, False)  # type: ignore
+
+    def update_tray_data(
+        self,
+        data: ModulesData,
+    ) -> None:
+        """Update the tray."""
+        self._logger.info("Update tray data")
+
+        latest_version_text = "Check for Updates"
+
+        version_current = getattr(data.system, "version") if data.system else None
+        version_latest = getattr(data.system, "version_latest") if data.system else None
+        version_newer_available = (
+            getattr(data.system, "version_newer_available") if data.system else None
+        )
+
+        if version_newer_available is not None:
+            latest_version_text = f"New version avaliable ({version_latest})"
+        elif version_current is not None:
+            latest_version_text = f"Up to date ({version_current})"
+
+        self.contextMenu().actions()[3].setText(latest_version_text)

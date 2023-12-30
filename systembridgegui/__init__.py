@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import os
 import sys
 from typing import Any
@@ -70,6 +71,8 @@ class Application(Base):
             """
         )
 
+        self._loop = asyncio.get_event_loop()
+
         if command == "main":
             self._logger.info("Main: Setup")
 
@@ -84,18 +87,16 @@ class Application(Base):
                 self._icon,
             )
 
-            self._loop = asyncio.get_event_loop()
             self._loop.create_task(self._setup_websocket())
 
-            self._system_tray_icon = SystemTray(
-                self._data,
+            self._system_tray = SystemTray(
                 self._settings,
                 self._icon,
                 self._application,
                 self._callback_exit_application,
                 self._callback_show_window,
             )
-            self._system_tray_icon.show()
+            self._system_tray.show()
         elif command == "media-player-audio":
             self._logger.info("Media Player: Audio")
             if data is None:
@@ -156,6 +157,7 @@ class Application(Base):
                 player.setAudioOutput(audio_output)
                 player.play()
 
+        self._loop.run_forever()
         sys.exit(self._application.exec())
 
     def _callback_exit_application(self) -> None:
@@ -211,7 +213,7 @@ class Application(Base):
     ) -> None:
         """Exit the backend."""
         self._logger.info("Exit..")
-        self._system_tray_icon.hide()
+        self._system_tray.hide()
 
         if code == 0:
             if self._loop is not None:
@@ -246,6 +248,7 @@ class Application(Base):
         """Handle data from the WebSocket client."""
         self._logger.debug("Set new data for: %s", module_name)
         setattr(self._data, module_name, module)
+        self._system_tray.update_tray_data(self._data)
 
     async def _listen_for_data(self) -> None:
         """Listen for events from the WebSocket."""
@@ -274,6 +277,7 @@ class Application(Base):
             async with asyncio.timeout(10):
                 await self._websocket_client.connect()
 
+                # Listen for data in the background
                 self._websocket_listen_task = self._loop.create_task(
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
