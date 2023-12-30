@@ -89,7 +89,8 @@ class Application(Base):
                 self._icon,
             )
 
-            self._loop.create_task(self._setup_websocket())
+            # Setup the WebSocket
+            self._loop.run_until_complete(self._setup_websocket(listen=True))
 
             self._system_tray = SystemTray(
                 self._settings,
@@ -227,7 +228,9 @@ class Application(Base):
                                 self._setup_websocket(listen=False)
                             )
                         self._logger.info("Request backend exit..")
-                        self._loop.run_until_complete(self._websocket_client.exit_backend())
+                        self._loop.run_until_complete(
+                            self._websocket_client.exit_backend()
+                        )
                         self._logger.info("Disconnect WebSocket..")
                         self._loop.run_until_complete(self._websocket_client.close())
                 except (
@@ -236,7 +239,9 @@ class Application(Base):
                     ConnectionClosedException,
                     ConnectionResetError,
                 ) as exception:
-                    self._logger.warning("Could not connect to WebSocket: %s", exception)
+                    self._logger.warning(
+                        "Could not connect to WebSocket: %s", exception
+                    )
 
                 try:
                     if self._websocket_listen_task:
@@ -281,6 +286,23 @@ class Application(Base):
             self._websocket_listen_task.cancel()
             self._websocket_listen_task = None
 
+    def _setup_listener(self) -> None:
+        """Set up the listener for the WebSocket."""
+        self._logger.info("Setup WebSocket listener..")
+        if self._websocket_listen_task:
+            self._websocket_listen_task.cancel()
+            self._websocket_listen_task = None
+
+        if self._loop is None:
+            self._logger.error("No event loop!")
+            return
+
+        # Listen for data
+        self._websocket_listen_task = self._loop.create_task(
+            self._listen_for_data(),
+            name="System Bridge WebSocket Listener",
+        )
+
     async def _setup_websocket(
         self,
         listen: bool = True,
@@ -299,11 +321,9 @@ class Application(Base):
                 if not listen:
                     return
 
-                # Listen for data
-                self._websocket_listen_task = self._loop.create_task(
-                    self._listen_for_data(),
-                    name="System Bridge WebSocket Listener",
-                )
+                # Run the listener in a separate thread
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    self._loop.run_in_executor(executor, self._setup_listener)
 
                 # Get initial data
                 await self._websocket_client.get_data(
