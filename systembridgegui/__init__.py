@@ -78,19 +78,11 @@ class Application(Base):
         if command == "main":
             self._logger.info("Main: Setup")
 
-            self._websocket_client = WebSocketClient(
-                "localhost",
-                self._settings.data.api.port,
-                self._settings.data.api.token,
-            )
-
+            # Setup the main window
             self._main_window = MainWindow(
                 self._settings,
                 self._icon,
             )
-
-            # Setup the WebSocket
-            self._loop.create_task(self._setup_websocket())
 
             # Setup the system tray
             self._system_tray = SystemTray(
@@ -101,6 +93,14 @@ class Application(Base):
                 self._callback_show_window,
             )
             self._system_tray.show()
+
+            # Setup the WebSocket
+            self._websocket_client = WebSocketClient(
+                "localhost",
+                self._settings.data.api.port,
+                self._settings.data.api.token,
+            )
+            self._loop.create_task(self._setup_websocket())
         elif command == "media-player-audio":
             self._logger.info("Media Player: Audio")
             if data is None:
@@ -161,7 +161,6 @@ class Application(Base):
                 player.setAudioOutput(audio_output)
                 player.play()
 
-        self._loop.run_forever()
         sys.exit(self._application.exec())
 
     def _callback_exit_application(self) -> None:
