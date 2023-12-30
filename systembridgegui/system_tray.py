@@ -1,13 +1,14 @@
 """System Tray."""
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
+import os
 from webbrowser import open_new_tab
 
 from pyperclip import copy
 from PySide6.QtGui import QAction, QCursor, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+
 from systembridgemodels.modules import ModulesData
 from systembridgeshared.base import Base
 from systembridgeshared.common import get_user_data_directory

@@ -10,6 +10,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
+
 from systembridgeconnector.websocket_client import WebSocketClient
 from systembridgemodels.media_play import MediaPlay
 from systembridgemodels.modules import DataEnum, GetData, ModulesData

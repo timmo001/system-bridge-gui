@@ -5,6 +5,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QVBoxLayout
+
 from systembridgeshared.base import Base
 from systembridgeshared.const import QUERY_API_PORT, QUERY_TOKEN
 from systembridgeshared.settings import Settings
