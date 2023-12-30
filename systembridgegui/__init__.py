@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from asyncio import AbstractEventLoop
 import os
 import sys
 from typing import Any
@@ -71,6 +72,8 @@ class Application(Base):
             """
         )
 
+        self._loop: AbstractEventLoop = asyncio.get_event_loop()
+
         if command == "main":
             self._logger.info("Main: Setup")
 
@@ -85,7 +88,6 @@ class Application(Base):
                 self._icon,
             )
 
-            self._loop = asyncio.get_event_loop()
             self._loop.create_task(self._setup_websocket())
 
             self._system_tray_icon = SystemTray(
@@ -235,7 +237,6 @@ class Application(Base):
                     self._logger.info("Stop event loop..")
                     self._loop.stop()
                     self._loop.close()
-                    self._loop = None
 
         self._logger.info("Exit GUI..")
         self._application.exit(code)
@@ -280,14 +281,14 @@ class Application(Base):
             async with asyncio.timeout(10):
                 await self._websocket_client.connect()
 
+                # If we don't need to listen for data, return here
+                if not listen:
+                    return
+
                 self._websocket_listen_task = self._loop.create_task(
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
                 )
-
-                # If we don't need to listen for data, return here
-                if not listen:
-                    return
 
                 await self._websocket_client.get_data(
                     GetData(
