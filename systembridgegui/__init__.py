@@ -218,25 +218,36 @@ class Application(Base):
 
         if code == 0:
             if self._loop is not None:
-                if self._websocket_client is not None:
-                    if not self._websocket_client.connected:
-                        self._logger.info("Connect to backend..")
-                        self._loop.run_until_complete(
-                            self._setup_websocket(listen=False)
-                        )
-                    self._logger.info("Request backend exit..")
-                    self._loop.run_until_complete(self._websocket_client.exit_backend())
-                    self._logger.info("Disconnect WebSocket..")
-                    self._loop.run_until_complete(self._websocket_client.close())
+                try:
+                    if self._websocket_client is not None:
+                        if not self._websocket_client.connected:
+                            self._logger.info("Connect to backend..")
+                            self._loop.run_until_complete(
+                                self._setup_websocket(listen=False)
+                            )
+                        self._logger.info("Request backend exit..")
+                        self._loop.run_until_complete(self._websocket_client.exit_backend())
+                        self._logger.info("Disconnect WebSocket..")
+                        self._loop.run_until_complete(self._websocket_client.close())
+                except (
+                    AuthenticationException,
+                    ConnectionErrorException,
+                    ConnectionClosedException,
+                    ConnectionResetError,
+                ) as exception:
+                    self._logger.warning("Could not connect to WebSocket: %s", exception)
 
-                if self._websocket_listen_task:
-                    self._logger.info("Cancel WebSocket listener..")
-                    self._websocket_listen_task.cancel()
-                    self._websocket_listen_task = None
+                try:
+                    if self._websocket_listen_task:
+                        self._logger.info("Cancel WebSocket listener..")
+                        self._websocket_listen_task.cancel()
+                        self._websocket_listen_task = None
 
-                    self._logger.info("Stop event loop..")
-                    self._loop.stop()
-                    self._loop.close()
+                        self._logger.info("Stop event loop..")
+                        self._loop.stop()
+                        self._loop.close()
+                except RuntimeError as exception:
+                    self._logger.warning("Could not stop event loop: %s", exception)
 
         self._logger.info("Exit GUI..")
         self._application.exit(code)
