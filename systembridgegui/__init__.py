@@ -290,23 +290,27 @@ class Application(Base):
 
         try:
             async with asyncio.timeout(10):
+                # Connect to the WebSocket
                 await self._websocket_client.connect()
 
                 # If we don't need to listen for data, return here
                 if not listen:
                     return
 
+                # Listen for data
                 self._websocket_listen_task = self._loop.create_task(
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
                 )
 
+                # Get initial data
                 await self._websocket_client.get_data(
                     GetData(
                         modules=[DataEnum.SYSTEM.value],
                     )
                 )
 
+                # Wait for initial data
                 while self._data.system is None:
                     self._logger.info("Waiting for system data..")
                     await asyncio.sleep(1)
