@@ -90,8 +90,9 @@ class Application(Base):
             )
 
             # Setup the WebSocket
-            self._loop.run_until_complete(self._setup_websocket(listen=True))
+            self._loop.create_task(self._setup_websocket())
 
+            # Setup the system tray
             self._system_tray = SystemTray(
                 self._settings,
                 self._icon,
