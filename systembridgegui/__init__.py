@@ -219,7 +219,9 @@ class Application(Base):
                 if self._websocket_client is not None:
                     if not self._websocket_client.connected:
                         self._logger.info("Connect to backend..")
-                        self._loop.run_until_complete(self._setup_websocket())
+                        self._loop.run_until_complete(
+                            self._setup_websocket(listen=False)
+                        )
                     self._logger.info("Request backend exit..")
                     self._loop.run_until_complete(self._websocket_client.exit_backend())
                     self._logger.info("Disconnect WebSocket..")
@@ -265,7 +267,10 @@ class Application(Base):
             self._websocket_listen_task.cancel()
             self._websocket_listen_task = None
 
-    async def _setup_websocket(self) -> None:
+    async def _setup_websocket(
+        self,
+        listen: bool = True,
+    ) -> None:
         """Use WebSocket for updates."""
         if self._loop is None:
             self._logger.error("No event loop!")
@@ -279,6 +284,10 @@ class Application(Base):
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
                 )
+
+                # If we don't need to listen for data, return here
+                if not listen:
+                    return
 
                 await self._websocket_client.get_data(
                     GetData(
