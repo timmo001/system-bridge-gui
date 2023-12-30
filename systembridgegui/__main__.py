@@ -5,9 +5,10 @@ import asyncio
 import json
 import sys
 
+from typer import Typer
+
 from systembridgeshared.logger import setup_logger
 from systembridgeshared.settings import Settings
-from typer import Typer
 
 from . import Application
 

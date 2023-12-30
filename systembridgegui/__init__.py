@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from asyncio import AbstractEventLoop
 import concurrent.futures
 import os
 import sys
@@ -11,6 +12,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
+
 from systembridgeconnector.websocket_client import WebSocketClient
 from systembridgemodels.media_play import MediaPlay
 from systembridgemodels.modules import DataEnum, GetData, ModulesData
@@ -71,7 +73,7 @@ class Application(Base):
             """
         )
 
-        self._loop = asyncio.get_event_loop()
+        self._loop: AbstractEventLoop = asyncio.get_event_loop()
 
         if command == "main":
             self._logger.info("Main: Setup")
@@ -217,24 +219,36 @@ class Application(Base):
 
         if code == 0:
             if self._loop is not None:
-                if self._websocket_client is not None:
-                    if not self._websocket_client.connected:
-                        self._logger.info("Connect to backend..")
-                        self._loop.run_until_complete(self._setup_websocket())
-                    self._logger.info("Request backend exit..")
-                    self._loop.run_until_complete(self._websocket_client.exit_backend())
-                    self._logger.info("Disconnect WebSocket..")
-                    self._loop.run_until_complete(self._websocket_client.close())
+                try:
+                    if self._websocket_client is not None:
+                        if not self._websocket_client.connected:
+                            self._logger.info("Connect to backend..")
+                            self._loop.run_until_complete(
+                                self._setup_websocket(listen=False)
+                            )
+                        self._logger.info("Request backend exit..")
+                        self._loop.run_until_complete(self._websocket_client.exit_backend())
+                        self._logger.info("Disconnect WebSocket..")
+                        self._loop.run_until_complete(self._websocket_client.close())
+                except (
+                    AuthenticationException,
+                    ConnectionErrorException,
+                    ConnectionClosedException,
+                    ConnectionResetError,
+                ) as exception:
+                    self._logger.warning("Could not connect to WebSocket: %s", exception)
 
-                if self._websocket_listen_task:
-                    self._logger.info("Cancel WebSocket listener..")
-                    self._websocket_listen_task.cancel()
-                    self._websocket_listen_task = None
+                try:
+                    if self._websocket_listen_task:
+                        self._logger.info("Cancel WebSocket listener..")
+                        self._websocket_listen_task.cancel()
+                        self._websocket_listen_task = None
 
-                    self._logger.info("Stop event loop..")
-                    self._loop.stop()
-                    self._loop.close()
-                    self._loop = None
+                        self._logger.info("Stop event loop..")
+                        self._loop.stop()
+                        self._loop.close()
+                except RuntimeError as exception:
+                    self._logger.warning("Could not stop event loop: %s", exception)
 
         self._logger.info("Exit GUI..")
         self._application.exit(code)
@@ -267,7 +281,10 @@ class Application(Base):
             self._websocket_listen_task.cancel()
             self._websocket_listen_task = None
 
-    async def _setup_websocket(self) -> None:
+    async def _setup_websocket(
+        self,
+        listen: bool = True,
+    ) -> None:
         """Use WebSocket for updates."""
         if self._loop is None:
             self._logger.error("No event loop!")
@@ -275,20 +292,27 @@ class Application(Base):
 
         try:
             async with asyncio.timeout(10):
+                # Connect to the WebSocket
                 await self._websocket_client.connect()
 
-                # Listen for data in the background
+                # If we don't need to listen for data, return here
+                if not listen:
+                    return
+
+                # Listen for data
                 self._websocket_listen_task = self._loop.create_task(
                     self._listen_for_data(),
                     name="System Bridge WebSocket Listener",
                 )
 
+                # Get initial data
                 await self._websocket_client.get_data(
                     GetData(
                         modules=[DataEnum.SYSTEM.value],
                     )
                 )
 
+                # Wait for initial data
                 while self._data.system is None:
                     self._logger.info("Waiting for system data..")
                     await asyncio.sleep(1)

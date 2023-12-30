@@ -8,6 +8,7 @@ from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout
+
 from systembridgemodels.notification import Notification
 from systembridgeshared.base import Base
 from systembridgeshared.const import QUERY_API_PORT, QUERY_TOKEN

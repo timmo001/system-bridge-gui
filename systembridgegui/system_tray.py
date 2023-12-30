@@ -8,6 +8,7 @@ from webbrowser import open_new_tab
 from pyperclip import copy
 from PySide6.QtGui import QAction, QCursor, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+
 from systembridgemodels.modules import ModulesData
 from systembridgeshared.base import Base
 from systembridgeshared.common import get_user_data_directory
@@ -90,11 +91,11 @@ class SystemTray(Base, QSystemTrayIcon):
 
         menu_help.addSeparator()
 
-        action_log: QAction = menu_help.addAction("Open Log File")
-        action_log.triggered.connect(self._open_log)  # type: ignore
+        action_log: QAction = menu_help.addAction("Open Backend Logs")
+        action_log.triggered.connect(self._open_backend_logs)  # type: ignore
 
-        action_log_gui: QAction = menu_help.addAction("Open GUI Log File")
-        action_log_gui.triggered.connect(self._open_gui_log)  # type: ignore
+        action_log_gui: QAction = menu_help.addAction("Open GUI Logs")
+        action_log_gui.triggered.connect(self._open_gui_logs)  # type: ignore
 
         menu.addSeparator()
 
@@ -141,14 +142,14 @@ class SystemTray(Base, QSystemTrayIcon):
         self._logger.info("Open: %s", URL_DISCUSSIONS)
         open_new_tab(URL_DISCUSSIONS)
 
-    def _open_log(self) -> None:
-        """Open log."""
-        log_path = os.path.join(get_user_data_directory(), "system-bridge.log")
+    def _open_backend_logs(self) -> None:
+        """Open backend logs."""
+        log_path = os.path.join(get_user_data_directory(), "system-bridge-backend.log")
         self._logger.info("Open: %s", log_path)
         open_new_tab(log_path)
 
-    def _open_gui_log(self) -> None:
-        """Open GUI log."""
+    def _open_gui_logs(self) -> None:
+        """Open GUI logs."""
         log_path = os.path.join(get_user_data_directory(), "system-bridge-gui.log")
         self._logger.info("Open: %s", log_path)
         open_new_tab(log_path)
