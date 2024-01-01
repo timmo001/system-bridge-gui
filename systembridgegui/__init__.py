@@ -216,7 +216,6 @@ class Application(Base):
     ) -> None:
         """Exit the backend."""
         self._logger.info("Exit..")
-        self._system_tray.hide()
 
         if code == 0:
             if self._loop is not None:
@@ -256,6 +255,7 @@ class Application(Base):
                     self._logger.warning("Could not stop event loop: %s", exception)
 
         self._logger.info("Exit GUI..")
+        self._system_tray.hide()
         self._application.exit(code)
         sys.exit(code)
 
