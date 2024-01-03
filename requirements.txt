@@ -1,6 +1,6 @@
 incremental==22.10.0
 pyperclip==1.8.2
 PySide6==6.6.1
-systembridgeconnector>=4.0.0.dev3
+systembridgeconnector>=4.0.0.dev6
 systembridgeshared>=4.0.0.dev10
 typer==0.9.0
