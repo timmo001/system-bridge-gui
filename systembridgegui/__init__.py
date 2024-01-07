@@ -23,6 +23,7 @@ from systembridgeshared.exceptions import (
     ConnectionClosedException,
     ConnectionErrorException,
 )
+from systembridgeshared.logger import setup_logger
 from systembridgeshared.settings import Settings
 
 from ._version import __version__
@@ -43,6 +44,7 @@ class Application(Base):
         data: dict | None = None,
     ) -> None:
         """Initialise."""
+        setup_logger(settings.data.log_level, "system-bridge-gui")
         super().__init__()
         self._logger.info("System Bridge GUI %s: Startup", __version__.public())
 
