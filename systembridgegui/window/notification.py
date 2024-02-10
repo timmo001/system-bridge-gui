@@ -70,9 +70,14 @@ class NotificationWindow(Base, QFrame):
             screen_geometry.height() - self.height() - 8,
         )
 
+        # Convert Notification to Dict and remove None values
         notification_dict = asdict(notification)
+        notification_dict = {
+            k: v for k, v in notification_dict.items() if v is not None
+        }
+
+        # Fix encoding issue by converting array to json
         if "actions" in notification_dict:
-            # Fix encoding issue by converting array to json
             notification_dict["actions"] = dumps(notification_dict["actions"])
 
         url = QUrl(
