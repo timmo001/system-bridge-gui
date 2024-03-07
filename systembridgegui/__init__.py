@@ -8,6 +8,7 @@ import os
 import sys
 from typing import Any
 
+from aiohttp import ClientSession
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -101,6 +102,7 @@ class Application(Base):
                 "localhost",
                 self._settings.data.api.port,
                 self._settings.data.api.token,
+                session=ClientSession(),
             )
             self._loop.create_task(self._setup_websocket())
         elif command == "media-player-audio":
