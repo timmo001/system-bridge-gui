@@ -1,10 +1,7 @@
 {
   "productName": "systembridge",
-  "version": "0.0.0",
+  "version": "4.1.0",
   "identifier": "dev.timmo.systembridge",
-  "build": {
-    "devUrl": "http://localhost:9170/app/data.html"
-  },
   "app": {
     "withGlobalTauri": true,
     "security": {
