@@ -5,7 +5,7 @@ use std::error::Error;
 
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
-    tray::{ClickType, TrayIconBuilder},
+    tray::ClickType,
     Manager,
 };
 use tauri::{App, AppHandle};
@@ -277,41 +277,31 @@ async fn main() {
                 ])
                 .build()?;
 
-            // let icon: Image = Image::
+            // Setup the tray
+            let tray = app.tray().unwrap();
+            tray.set_menu(Some(menu))?;
+            tray.on_tray_icon_event(|tray, event| match event.click_type {
+                ClickType::Double => {
+                    let app = tray.app_handle();
 
-            // Setup the tray icon
-            TrayIconBuilder::new()
-                .tooltip("System Bridge")
-                // .icon(icon)
-                .menu(&menu)
-                .menu_on_left_click(true)
-                .on_menu_event(
-                    move |app: &tauri::AppHandle, event: tauri::menu::MenuEvent| match event
-                        .id()
-                        .as_ref()
-                    {
-                        "show_settings" => {
-                            create_window(app, "settings".to_string()).unwrap();
-                        }
-                        "show_data" => {
-                            create_window(app, "data".to_string()).unwrap();
-                        }
-                        _ => (),
-                    },
-                )
-                .on_tray_icon_event(|tray, event| match event.click_type {
-                    ClickType::Left => {
-                        // Show menu
-                        // tray
+                    create_window(app, "data".to_string()).unwrap();
+                }
+                _ => (),
+            });
+            tray.on_menu_event(
+                move |app: &tauri::AppHandle, event: tauri::menu::MenuEvent| match event
+                    .id()
+                    .as_ref()
+                {
+                    "show_settings" => {
+                        create_window(app, "settings".to_string()).unwrap();
                     }
-                    ClickType::Double => {
-                        let app = tray.app_handle();
-
+                    "show_data" => {
                         create_window(app, "data".to_string()).unwrap();
                     }
                     _ => (),
-                })
-                .build(app)?;
+                },
+            );
 
             Ok(())
         })

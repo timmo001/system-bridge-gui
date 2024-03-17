@@ -6,6 +6,13 @@
     "withGlobalTauri": true,
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "iconAsTemplate": false,
+      "iconPath": "icons/icon.png",
+      "menuOnLeftClick": true,
+      "title": "System Bridge",
+      "tooltip": "System Bridge"
     }
   },
   "bundle": {
