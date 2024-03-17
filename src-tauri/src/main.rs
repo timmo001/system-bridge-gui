@@ -2,16 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::error::Error;
+use tauri_plugin_shell::ShellExt;
 
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
     tray::ClickType,
-    Manager,
+    App, AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
 };
-use tauri::{App, AppHandle};
-use tauri::{WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 // use tauri_plugin_updater::UpdaterExt;
 use tokio;
 
@@ -141,6 +141,24 @@ async fn start_backend(
     Ok(())
 }
 
+fn stop_backend(install_path: String) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Stopping backend server");
+
+    let backend_path: String = format!("{}/backend/systembridge", install_path);
+
+    // Find any running backend server processes
+    let processes = psutil::process::processes()?;
+
+    for process in processes.unwrap() {
+        if process.name().unwrap() == "systembridge" {
+            println!("Killing process: {}", process.pid());
+            process.kill()?;
+        }
+    }
+
+    Ok(())
+}
+
 fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating window: {}", page);
 
@@ -260,18 +278,46 @@ async fn main() {
 
             // Setup the tray menu
             let separator = PredefinedMenuItem::separator(app)?;
-            let settings = MenuItemBuilder::with_id("show_settings", "Open Settings").build(app)?;
-            let data = MenuItemBuilder::with_id("show_data", "View Data").build(app)?;
+            let show_settings =
+                MenuItemBuilder::with_id("show_settings", "Open settings").build(app)?;
+            let show_data = MenuItemBuilder::with_id("show_data", "View data").build(app)?;
             let check_for_updates =
-                MenuItemBuilder::with_id("check_for_updates", "Check for Updates").build(app)?;
-            let exit = PredefinedMenuItem::quit(app, Some("Exit"))?;
+                MenuItemBuilder::with_id("check_for_updates", "Check for updates").build(app)?;
+            let open_docs =
+                MenuItemBuilder::with_id("open_docs", "Documentation / Website").build(app)?;
+            let open_suggestions =
+                MenuItemBuilder::with_id("open_suggestions", "Suggest / Request a feature")
+                    .build(app)?;
+            let open_issues =
+                MenuItemBuilder::with_id("open_issues", "Report an Issue").build(app)?;
+            let open_discussions =
+                MenuItemBuilder::with_id("open_discussions", "Discussions / Community")
+                    .build(app)?;
+            let copy_token =
+                MenuItemBuilder::with_id("copy_token", "Copy token to clipboard").build(app)?;
+            let open_logs_backend =
+                MenuItemBuilder::with_id("open_logs_backend", "View backend logs").build(app)?;
+            let help = SubmenuBuilder::new(app, "Help")
+                .items(&[
+                    &open_docs,
+                    &open_suggestions,
+                    &open_issues,
+                    &open_discussions,
+                    &separator,
+                    &copy_token,
+                    &separator,
+                    &open_logs_backend,
+                ])
+                .build()?;
+            let exit = MenuItemBuilder::with_id("exit", "Exit").build(app)?;
 
             let menu = MenuBuilder::new(app)
                 .items(&[
-                    &settings,
-                    &data,
+                    &show_settings,
+                    &show_data,
                     &separator,
                     &check_for_updates,
+                    &help,
                     &separator,
                     &exit,
                 ])
@@ -298,6 +344,77 @@ async fn main() {
                     }
                     "show_data" => {
                         create_window(app, "data".to_string()).unwrap();
+                    }
+                    "check_for_updates" => {
+                        // let handle: &tauri::AppHandle = app;
+                        // tauri::async_runtime::spawn(async move {
+                        //     let response: Result<
+                        //         Option<tauri_plugin_updater::Update>,
+                        //         tauri_plugin_updater::Error,
+                        //     > = handle.updater().expect("REASON").check().await;
+                        //     if response.is_ok() {
+                        //         let update: Option<tauri_plugin_updater::Update> = response.unwrap();
+                        //         if update.is_some() {
+                        //             let update: tauri_plugin_updater::Update = update.unwrap();
+                        //             println!("Update available: {}", update.version);
+                        //         }
+                        //     }
+                        // });
+                    }
+                    "open_docs" => {
+                        app.shell()
+                            .open("https://system-bridge.timmo.dev", None)
+                            .unwrap();
+                    }
+                    "open_suggestions" => {
+                        app.shell()
+                            .open(
+                                "https://github.com/timmo001/system-bridge/issues/new/choose",
+                                None,
+                            )
+                            .unwrap();
+                    }
+                    "open_issues" => {
+                        app.shell()
+                            .open(
+                                "https://github.com/timmo001/system-bridge/issues/new/choose",
+                                None,
+                            )
+                            .unwrap();
+                    }
+                    "open_discussions" => {
+                        app.shell()
+                            .open(
+                                "https://github.com/timmo001/system-bridge/discussions",
+                                None,
+                            )
+                            .unwrap();
+                    }
+                    "copy_token" => {
+                        let settings: Settings = get_settings().unwrap();
+                        app.clipboard()
+                            .write(tauri_plugin_clipboard_manager::ClipKind::PlainText {
+                                label: Some("System Bridge Token".to_string()),
+                                text: settings.api.token.clone(),
+                            })
+                            .unwrap();
+                    }
+                    "open_logs_backend" => {
+                        let install_path: String = format!(
+                            "{}/timmo001/systembridge",
+                            std::env::var("LOCALAPPDATA").unwrap()
+                        );
+                        let backend_log_path: String =
+                            format!("{}/systembridgebackend.log", install_path);
+                        if !std::path::Path::new(&backend_log_path).exists() {
+                            println!("Backend log file not found");
+                            return;
+                        }
+                        app.shell().open(backend_log_path, None).unwrap();
+                    }
+                    "exit" => {
+                        let _ = stop_backend(install_path.clone());
+                        app.exit(0);
                     }
                     _ => (),
                 },
