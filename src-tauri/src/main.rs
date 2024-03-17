@@ -121,7 +121,9 @@ async fn start_backend(
     println!("Starting backend server");
     let backend_path: String = format!("{}/backend/systembridge", install_path);
     let process: Result<std::process::Child, std::io::Error> =
-        std::process::Command::new(backend_path).spawn();
+        std::process::Command::new(backend_path)
+            .args(["--no-gui"])
+            .spawn();
     if process.is_err() {
         return Err("Failed to start the backend server".into());
     }
@@ -141,18 +143,18 @@ async fn start_backend(
     Ok(())
 }
 
-fn stop_backend(install_path: String) -> Result<(), Box<dyn std::error::Error>> {
+fn stop_backend() -> Result<(), Box<dyn std::error::Error>> {
     println!("Stopping backend server");
 
-    let backend_path: String = format!("{}/backend/systembridge", install_path);
-
     // Find any running backend server processes
-    let processes = psutil::process::processes()?;
+    sysinfo::set_open_files_limit(0);
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes();
 
-    for process in processes.unwrap() {
-        if process.name().unwrap() == "systembridge" {
-            println!("Killing process: {}", process.pid());
-            process.kill()?;
+    for (pid, process) in sys.processes() {
+        if process.name().contains("systembridge") {
+            println!("Killing process: {}", pid);
+            let _ = process.kill();
         }
     }
 
@@ -407,13 +409,13 @@ async fn main() {
                         let backend_log_path: String =
                             format!("{}/systembridgebackend.log", install_path);
                         if !std::path::Path::new(&backend_log_path).exists() {
-                            println!("Backend log file not found");
+                            println!("Backend log file not found at: {}", backend_log_path);
                             return;
                         }
                         app.shell().open(backend_log_path, None).unwrap();
                     }
                     "exit" => {
-                        let _ = stop_backend(install_path.clone());
+                        let _ = stop_backend();
                         app.exit(0);
                     }
                     _ => (),
