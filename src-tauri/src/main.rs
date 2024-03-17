@@ -121,8 +121,8 @@ async fn check_backend_api(base_url: String, token: String) -> Result<(), Box<dy
 }
 
 async fn start_backend(install_path: String, base_url: String) -> Result<(), Box<dyn Error>> {
-    println!("Starting backend server");
     let backend_path = format!("{}/backend/systembridge", install_path);
+    println!("Starting backend server: {} --no-gui", backend_path);
     let process = std::process::Command::new(backend_path)
         .args(["--no-gui"])
         .spawn();
