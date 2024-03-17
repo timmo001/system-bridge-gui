@@ -1,7 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::error::Error;
+use reqwest::Client;
+use std::{error::Error, time::Duration};
 use tauri_plugin_shell::ShellExt;
 
 use tauri::{
@@ -45,26 +46,30 @@ fn page_title_map() -> Vec<(&'static str, &'static str)> {
     vec![("data", "Data"), ("settings", "Settings")]
 }
 
-fn get_settings() -> Result<Settings, Box<dyn std::error::Error>> {
-    // Get install directory from &localappdata%\timmo001\systembridge
-    let install_path: String = format!(
+fn get_install_path() -> String {
+    format!(
         "{}/timmo001/systembridge",
         std::env::var("LOCALAPPDATA").unwrap()
-    );
+    )
+}
+
+fn get_settings() -> Result<Settings, Box<dyn Error>> {
+    // Get install directory from &localappdata%\timmo001\systembridge
+    let install_path = get_install_path();
 
     // Read settings from {install_path}\settings.json
-    let settings_path: String = format!("{}/settings.json", install_path);
+    let settings_path = format!("{}/settings.json", install_path);
     if !std::path::Path::new(&settings_path).exists() {
         return Err("Settings file not found".into());
     }
 
-    let settings: String = std::fs::read_to_string(settings_path)?;
-    let settings: Settings = serde_json::from_str(&settings)?;
+    let settings = std::fs::read_to_string(settings_path)?;
+    let settings = serde_json::from_str(&settings)?;
 
     Ok(settings)
 }
 
-fn setup_autostart(app: &mut App, autostart: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_autostart(app: &mut App, autostart: bool) -> Result<(), Box<dyn Error>> {
     println!("Autostart: {}", autostart);
 
     // Get the autostart manager
@@ -80,11 +85,12 @@ fn setup_autostart(app: &mut App, autostart: bool) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
-async fn check_backend(base_url: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn check_backend(base_url: String) -> Result<(), Box<dyn Error>> {
     println!("Checking backend server: {}/", base_url);
 
     // Check if the backend server is running
-    let response: reqwest::Response = reqwest::get(format!("{}/", base_url)).await?;
+    let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+    let response = client.get(format!("{}/", base_url)).send().await?;
 
     if response.status().is_success() {
         println!("Backend server is already running");
@@ -94,13 +100,13 @@ async fn check_backend(base_url: String) -> Result<(), Box<dyn std::error::Error
     }
 }
 
-async fn check_backend_api(
-    base_url: String,
-    token: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn check_backend_api(base_url: String, token: String) -> Result<(), Box<dyn Error>> {
     // Check if the backend server is running
-    let response: reqwest::Response =
-        reqwest::get(format!("{}/api?token={}", base_url, token)).await?;
+    let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+    let response = client
+        .get(format!("{}/api?token={}", base_url, token))
+        .send()
+        .await?;
 
     if !response.status().is_success() {
         let response_code = response.status().as_u16();
@@ -114,16 +120,12 @@ async fn check_backend_api(
     Ok(())
 }
 
-async fn start_backend(
-    install_path: String,
-    base_url: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn start_backend(install_path: String, base_url: String) -> Result<(), Box<dyn Error>> {
     println!("Starting backend server");
-    let backend_path: String = format!("{}/backend/systembridge", install_path);
-    let process: Result<std::process::Child, std::io::Error> =
-        std::process::Command::new(backend_path)
-            .args(["--no-gui"])
-            .spawn();
+    let backend_path = format!("{}/backend/systembridge", install_path);
+    let process = std::process::Command::new(backend_path)
+        .args(["--no-gui"])
+        .spawn();
     if process.is_err() {
         return Err("Failed to start the backend server".into());
     }
@@ -133,8 +135,8 @@ async fn start_backend(
     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     // Check if the backend server is running
-    let response: reqwest::Response = reqwest::get(format!("{}/", base_url)).await?;
-    if !response.status().is_success() {
+    let backend_active = check_backend(base_url.clone()).await;
+    if !backend_active.is_ok() {
         return Err("Failed to start the backend server".into());
     }
 
@@ -143,7 +145,7 @@ async fn start_backend(
     Ok(())
 }
 
-fn stop_backend() -> Result<(), Box<dyn std::error::Error>> {
+fn stop_backend() -> Result<(), Box<dyn Error>> {
     println!("Stopping backend server");
 
     // Find any running backend server processes
@@ -161,12 +163,12 @@ fn stop_backend() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn std::error::Error>> {
+fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn Error>> {
     println!("Creating window: {}", page);
 
-    let settings: Settings = get_settings().unwrap();
+    let settings = get_settings().unwrap();
 
-    let title: String = format!(
+    let title = format!(
         "{} | System Bridge",
         page_title_map()
             .iter()
@@ -208,33 +210,29 @@ fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn std::error
 #[tokio::main]
 async fn main() {
     // Get install directory from &localappdata%\timmo001\systembridge
-    let install_path: String = format!(
-        "{}/timmo001/systembridge",
-        std::env::var("LOCALAPPDATA").unwrap()
-    );
+    let install_path = get_install_path();
 
     // Read settings from {install_path}\settings.json
-    let settings_path: String = format!("{}/settings.json", install_path);
+    let settings_path = format!("{}/settings.json", install_path);
     if !std::path::Path::new(&settings_path).exists() {
         println!("Settings file not found");
         std::process::exit(1);
     }
 
     // Get settings
-    let settings: Settings = get_settings().unwrap();
+    let settings = get_settings().unwrap();
 
-    let base_url: String = format!(
+    let base_url = format!(
         "http://{}:{}",
         BACKEND_HOST,
         settings.api.port.to_string().clone()
     );
 
     // Check if the backend server is running
-    let backend_active: Result<(), Box<dyn Error>> = check_backend(base_url.clone()).await;
+    let backend_active = check_backend(base_url.clone()).await;
     if !backend_active.is_ok() {
         // Start the backend server
-        let backend_start: Result<(), Box<dyn Error>> =
-            start_backend(install_path.clone(), base_url.clone()).await;
+        let backend_start = start_backend(install_path.clone(), base_url.clone()).await;
         if !backend_start.is_ok() {
             println!("Failed to start the backend server");
             std::process::exit(1);
@@ -242,8 +240,7 @@ async fn main() {
     }
 
     // Check the backend API
-    let api_active: Result<(), Box<dyn Error>> =
-        check_backend_api(base_url.clone(), settings.api.token.clone()).await;
+    let api_active = check_backend_api(base_url.clone(), settings.api.token.clone()).await;
     if !api_active.is_ok() {
         println!("Backend API is not running");
         std::process::exit(1);
@@ -393,7 +390,7 @@ async fn main() {
                             .unwrap();
                     }
                     "copy_token" => {
-                        let settings: Settings = get_settings().unwrap();
+                        let settings = get_settings().unwrap();
                         app.clipboard()
                             .write(tauri_plugin_clipboard_manager::ClipKind::PlainText {
                                 label: Some("System Bridge Token".to_string()),
@@ -402,12 +399,8 @@ async fn main() {
                             .unwrap();
                     }
                     "open_logs_backend" => {
-                        let install_path: String = format!(
-                            "{}/timmo001/systembridge",
-                            std::env::var("LOCALAPPDATA").unwrap()
-                        );
-                        let backend_log_path: String =
-                            format!("{}/systembridgebackend.log", install_path);
+                        let install_path = get_install_path();
+                        let backend_log_path = format!("{}/systembridgebackend.log", install_path);
                         if !std::path::Path::new(&backend_log_path).exists() {
                             println!("Backend log file not found at: {}", backend_log_path);
                             return;
