@@ -80,38 +80,18 @@ fn setup_autostart(app: &mut App, autostart: bool) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
-async fn check_backend(
-    install_path: String,
-    base_url: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn check_backend(base_url: String) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Checking backend server: {}/", base_url);
+
     // Check if the backend server is running
     let response: reqwest::Response = reqwest::get(format!("{}/", base_url)).await?;
 
     if response.status().is_success() {
         println!("Backend server is already running");
+        Ok(())
     } else {
-        println!("Backend server is not running, starting it...");
-        let backend_path: String = format!("{}/backend/systembridge", install_path);
-        let process: Result<std::process::Child, std::io::Error> =
-            std::process::Command::new(backend_path).spawn();
-        if process.is_err() {
-            return Err("Failed to start the backend server".into());
-        }
-
-        println!("Backend server started");
-        // Wait for the backend server to start
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-
-        // Check if the backend server is running
-        let response: reqwest::Response = reqwest::get(format!("{}/", base_url)).await?;
-        if !response.status().is_success() {
-            return Err("Failed to start the backend server".into());
-        }
-
-        println!("Backend server is running");
+        Err(format!("Backend server is not running").into())
     }
-
-    Ok(())
 }
 
 async fn check_backend_api(
@@ -130,6 +110,33 @@ async fn check_backend_api(
 
     let response: APIBaseResponse = response.json().await?;
     println!("Backend server version: {}", response.version);
+
+    Ok(())
+}
+
+async fn start_backend(
+    install_path: String,
+    base_url: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting backend server");
+    let backend_path: String = format!("{}/backend/systembridge", install_path);
+    let process: Result<std::process::Child, std::io::Error> =
+        std::process::Command::new(backend_path).spawn();
+    if process.is_err() {
+        return Err("Failed to start the backend server".into());
+    }
+
+    println!("Backend server started");
+    // Wait for the backend server to start
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+    // Check if the backend server is running
+    let response: reqwest::Response = reqwest::get(format!("{}/", base_url)).await?;
+    if !response.status().is_success() {
+        return Err("Failed to start the backend server".into());
+    }
+
+    println!("Backend server is running");
 
     Ok(())
 }
@@ -203,11 +210,15 @@ async fn main() {
     );
 
     // Check if the backend server is running
-    let backend_active: Result<(), Box<dyn Error>> =
-        check_backend(install_path.clone(), base_url.clone()).await;
+    let backend_active: Result<(), Box<dyn Error>> = check_backend(base_url.clone()).await;
     if !backend_active.is_ok() {
-        println!("Backend is not running");
-        std::process::exit(1);
+        // Start the backend server
+        let backend_start: Result<(), Box<dyn Error>> =
+            start_backend(install_path.clone(), base_url.clone()).await;
+        if !backend_start.is_ok() {
+            println!("Failed to start the backend server");
+            std::process::exit(1);
+        }
     }
 
     // Check the backend API
