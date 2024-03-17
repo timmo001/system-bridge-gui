@@ -4,7 +4,9 @@
 use std::error::Error;
 
 use tauri::{
-    image::Image, menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem}, tray::{ClickType, TrayIconBuilder}, utils::config::AppImageConfig, Manager
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
+    tray::{ClickType, TrayIconBuilder},
+    Manager,
 };
 use tauri::{App, AppHandle};
 use tauri::{WebviewUrl, WebviewWindowBuilder};
@@ -135,10 +137,16 @@ async fn check_backend_api(
 fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating window: {}", page);
 
-    // Destroy the window if it already exists
-    app.get_webview_window("main").map(|window| window.close());
-
     let settings: Settings = get_settings().unwrap();
+
+    let title: String = format!(
+        "{} | System Bridge",
+        page_title_map()
+            .iter()
+            .find(|(key, _)| key == &page)
+            .unwrap()
+            .1
+    );
 
     let url: tauri::Url = format!(
         "http://{}:{}/app/{}.html?apiPort={}&token={}",
@@ -151,16 +159,19 @@ fn create_window(app: &AppHandle, page: String) -> Result<(), Box<dyn std::error
     .parse()
     .unwrap();
 
-    WebviewWindowBuilder::new(app, "main".to_string(), WebviewUrl::External(url))
+    let window = app.get_webview_window("main");
+    if window.is_some() {
+        let mut window: tauri::WebviewWindow = window.unwrap();
+        window.show().unwrap();
+        window.navigate(url);
+        window.set_title(title.as_str()).unwrap();
+        window.set_focus().unwrap();
+        return Ok(());
+    }
+
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
         .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
-        .title(format!(
-            "{} | System Bridge",
-            page_title_map()
-                .iter()
-                .find(|(key, _)| key == &page)
-                .unwrap()
-                .1
-        ))
+        .title(title)
         .build()
         .unwrap();
 
@@ -238,16 +249,10 @@ async fn main() {
 
             // Setup the tray menu
             let separator = PredefinedMenuItem::separator(app)?;
-            let settings = MenuItemBuilder::with_id("show_settings", "Open Settings")
-                .accelerator("S")
-                .build(app)?;
-            let data = MenuItemBuilder::with_id("show_data", "View Data")
-                .accelerator("D")
-                .build(app)?;
+            let settings = MenuItemBuilder::with_id("show_settings", "Open Settings").build(app)?;
+            let data = MenuItemBuilder::with_id("show_data", "View Data").build(app)?;
             let check_for_updates =
-                MenuItemBuilder::with_id("check_for_updates", "Check for Updates")
-                    .accelerator("CmdOrControl+U")
-                    .build(app)?;
+                MenuItemBuilder::with_id("check_for_updates", "Check for Updates").build(app)?;
             let exit = PredefinedMenuItem::quit(app, Some("Exit"))?;
 
             let menu = MenuBuilder::new(app)
@@ -284,6 +289,10 @@ async fn main() {
                     },
                 )
                 .on_tray_icon_event(|tray, event| match event.click_type {
+                    ClickType::Left => {
+                        // Show menu
+                        // tray
+                    }
                     ClickType::Double => {
                         let app = tray.app_handle();
 
