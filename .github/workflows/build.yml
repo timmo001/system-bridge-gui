@@ -19,4 +19,4 @@ concurrency:
 
 jobs:
   build:
-    uses: timmo001/workflows/.github/workflows/build-python-linux.yml@master
+    uses: timmo001/workflows/.github/workflows/build-tauri.yml@master
